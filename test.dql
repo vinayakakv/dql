@@ -1,0 +1,19 @@
+with parent as (
+  select form
+  from body
+  where #add-to-cart-form
+), multipleSizeGroupParent as (
+  select ul
+  from parent
+  where has(li having first() and .border-green)
+), normalSizeGroupParent as (
+  select fieldset
+  from parent
+  where has(not(ul having nth-of-type(2)))
+), multipleSizeGroupSizes as (
+  select raw("~ ul li input[name='variant']~label")
+  from multipleSizeGroupParent
+), normalSizeGroupSizes as (
+  select raw("ul li input[name='variant']~label")
+  from normalSizeGroupParent
+) select union(multipleSizeGroupSizes, normalSizeGroupSizes)

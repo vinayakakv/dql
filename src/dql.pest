@@ -1,0 +1,92 @@
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT    = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+
+dql = _{ SOI ~ program ~ EOI }
+
+program = {
+    ("with" ~ cte ~ ("," ~ cte)*)? ~ (rawStatement | unionStatement | normalStatement)
+}
+
+cte = {
+    htmlName ~ "as" ~ "(" ~ (rawStatement | normalStatement) ~ ")"
+}
+
+rawStatement = {
+    "select" ~ selectRaw ~ ("from" ~ #from = htmlName)?
+}
+
+unionStatement = {
+    "select" ~ "union(" ~ htmlName ~ ("," ~ htmlName)+ ~ ")"
+}
+
+normalStatement = {
+    "select" ~ (selectExpression | selectAll) ~ ("from" ~ #from = htmlName) ~ #where = ("where" ~ expression)?
+}
+
+selectExpression = {
+    prefix? ~ htmlName
+}
+
+selectAll = {
+    "*"
+}
+
+selectRaw = {
+    "raw(" ~ string ~ ")"
+}
+
+htmlName = @{
+    (ASCII_ALPHA) ~ (ASCII_ALPHA | ASCII_DIGIT | "_" | "-")*
+}
+
+prefix = { ">" | "+" | "~" }
+
+expression = {
+    expressionFragment ~ ("and" ~ expressionFragment)*
+}
+
+expressionFragment = {
+    selectorFragment
+  | logicFragment
+  | functionCall
+  | "(" ~ expression ~ ")"
+}
+
+selectorFragment = { selectorOperator ~ htmlName }
+
+selectorOperator = _{ "." | "#" }
+
+logicFragment = { htmlName ~ logicOperator ~ string }
+
+logicOperator = { "=" | "*=" | "~=" }
+
+functionCall = {
+    htmlName ~ "(" ~ argsList? ~ ")"
+}
+
+argsList = {
+    arg ~ ("," ~ arg)*
+}
+
+arg = {
+    functionCall
+  | (htmlName ~ havingClause?)
+  | number
+}
+
+havingClause = {
+    "having" ~ expression
+}
+
+number = {
+    ASCII_DIGIT+
+}
+
+// retained from json pest
+string = ${ "\"" ~ inner ~ "\"" }
+inner  = @{ char* }
+char   = _{
+    !("\"" | "\\") ~ ANY
+  | "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t")
+  | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
+}
